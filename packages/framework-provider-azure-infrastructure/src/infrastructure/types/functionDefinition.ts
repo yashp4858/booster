@@ -4,6 +4,12 @@ export interface Binding {
   direction: string
 }
 
+export type HttpBinding = Binding & {
+  authLevel?: string
+  methods?: Array<string>
+  route?: string
+}
+
 export type ScheduleBinding = Binding & {
   schedule: string
 }
@@ -14,11 +20,11 @@ export type GraphQLBinding = Binding & {
 }
 
 export type EventHandlerBinding = Binding & {
-  leaseCollectionName: string
-  connectionStringSetting: string
+  leaseContainerName: string
+  connection: string
   databaseName: string
-  collectionName: string
-  createLeaseCollectionIfNotExists: string
+  containerName: string
+  createLeaseContainerIfNotExists: string
   [key: string]: any
 }
 
@@ -46,6 +52,8 @@ export interface FunctionDefinition<T extends Binding = Binding> {
 export type ScheduleFunctionDefinition = FunctionDefinition<ScheduleBinding>
 
 export type GraphQLFunctionDefinition = FunctionDefinition<GraphQLBinding>
+
+export type HttpFunctionDefinition = FunctionDefinition<HttpBinding>
 
 export type EventHandlerFunctionDefinition = FunctionDefinition<EventHandlerBinding>
 

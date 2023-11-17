@@ -1,13 +1,34 @@
 import { Booster, PublicKeyTokenVerifier } from '@boostercloud/framework-core'
-import { BoosterConfig, DecodedToken } from '@boostercloud/framework-types'
+import { BoosterConfig, DecodedToken, TraceActionTypes } from '@boostercloud/framework-types'
 import * as fs from 'fs'
 import * as path from 'path'
+import { CustomTracer } from '../common/custom-tracer'
+import { CustomLogger } from '../common/custom-logger'
 
 class CustomPublicKeyTokenVerifier extends PublicKeyTokenVerifier {
   public async verify(token: string): Promise<DecodedToken> {
     await super.verify(token)
     throw new Error('Unauthorized')
   }
+}
+
+function configureLogger(config: BoosterConfig): void {
+  config.logger = new CustomLogger()
+}
+
+function configureInvocationsHandler(config: BoosterConfig) {
+  config.traceConfiguration = {
+    enableTraceNotification: [TraceActionTypes.COMMAND_HANDLER, 'CHANGE_CART_ITEM_HANDLER'],
+    includeInternal: false,
+    onStart: CustomTracer.onStart,
+    onEnd: CustomTracer.onEnd,
+  }
+}
+
+function configureBoosterSensorHealth(config: BoosterConfig) {
+  Object.values(config.sensorConfiguration.health.booster).forEach((indicator) => {
+    indicator.enabled = true
+  })
 }
 
 Booster.configure('local', (config: BoosterConfig): void => {
@@ -27,12 +48,17 @@ Booster.configure('local', (config: BoosterConfig): void => {
       'booster:role'
     ),
   ]
+  configureInvocationsHandler(config)
+  configureLogger(config)
+  configureBoosterSensorHealth(config)
 })
 
 Booster.configure('development', (config: BoosterConfig): void => {
   config.appName = 'my-store'
   config.providerPackage = '@boostercloud/framework-provider-aws'
   config.assets = ['assets', 'assetFile.txt']
+  configureInvocationsHandler(config)
+  configureBoosterSensorHealth(config)
 })
 
 Booster.configure('production', (config: BoosterConfig): void => {
@@ -61,6 +87,8 @@ Booster.configure('production', (config: BoosterConfig): void => {
       'booster:role'
     ),
   ]
+  configureInvocationsHandler(config)
+  configureBoosterSensorHealth(config)
 })
 
 Booster.configure('azure', (config: BoosterConfig): void => {
@@ -89,4 +117,7 @@ Booster.configure('azure', (config: BoosterConfig): void => {
       'booster:role'
     ),
   ]
+  configureInvocationsHandler(config)
+  configureLogger(config)
+  configureBoosterSensorHealth(config)
 })

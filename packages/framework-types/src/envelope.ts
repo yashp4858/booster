@@ -33,6 +33,11 @@ export interface CommandEnvelope extends TypedEnvelope {
 
 export type QueryEnvelope = CommandEnvelope
 
+export interface HealthEnvelope extends Envelope {
+  componentPath: string
+  token?: string
+}
+
 export interface ScheduledCommandEnvelope extends Envelope {
   typeName: string
 }
@@ -96,7 +101,7 @@ export interface EventSearchResponse {
   requestID: UUID
   user?: UserEnvelope
   createdAt: string
-  value: EventInterface
+  value: EventInterface | NotificationInterface
 }
 
 export interface ReadModelEnvelope {

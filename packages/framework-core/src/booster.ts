@@ -29,6 +29,9 @@ import { BoosterDataMigrationFinished } from './core-concepts/data-migration/eve
 import { JwksUriTokenVerifier, JWT_ENV_VARS } from './services/token-verifiers'
 import { BoosterAuthorizer } from './booster-authorizer'
 import { BoosterReadModelsReader } from './booster-read-models-reader'
+import { BoosterEntityTouched } from './core-concepts/touch-entity/events/booster-entity-touched'
+import { eventSearch } from './booster-event-search'
+import { BoosterHealthService } from './sensor'
 
 /**
  * Main class to interact with Booster and configure it.
@@ -72,7 +75,6 @@ export class Booster {
     this.config.userProjectRootPath = projectRootPath
     Importer.importUserProjectFiles(codeRootPath)
     this.configureBoosterConcepts()
-    this.configureDataMigrations()
     this.loadTokenVerifierFromEnv()
     this.config.validate()
   }
@@ -103,12 +105,7 @@ export class Booster {
   }
 
   public static async events(request: EventSearchParameters): Promise<Array<EventSearchResponse>> {
-    const events: Array<EventSearchResponse> = await this.config.provider.events.search(this.config, request)
-    return events.map((event) => {
-      const eventMetadata = this.config.events[event.type]
-      event.value = createInstance(eventMetadata.class, event.value)
-      return event
-    })
+    return eventSearch(this.config, request)
   }
 
   public static async entitiesIDs(
@@ -156,8 +153,13 @@ export class Booster {
     return new BoosterRocketDispatcher(this.config).dispatch(request)
   }
 
+  public static dispatchBoosterHealth(request: unknown): Promise<unknown> {
+    return new BoosterHealthService(this.config).boosterHealth(request)
+  }
+
   private static configureBoosterConcepts(): void {
     this.configureDataMigrations()
+    this.configureTouchEntities()
   }
 
   private static configureDataMigrations(): void {
@@ -186,6 +188,12 @@ export class Booster {
     this.config.entities[BoosterDataMigrationEntity.name] = {
       class: BoosterDataMigrationEntity,
       eventStreamAuthorizer: BoosterAuthorizer.denyAccess,
+    }
+  }
+
+  private static configureTouchEntities(): void {
+    this.config.events[BoosterEntityTouched.name] = {
+      class: BoosterEntityTouched,
     }
   }
 
@@ -241,4 +249,8 @@ export async function boosterNotifySubscribers(rawRequest: unknown): Promise<unk
 
 export async function boosterRocketDispatcher(rawRequest: unknown): Promise<unknown> {
   return Booster.dispatchRocket(rawRequest)
+}
+
+export async function boosterHealth(rawRequest: unknown): Promise<unknown> {
+  return Booster.dispatchBoosterHealth(rawRequest)
 }
